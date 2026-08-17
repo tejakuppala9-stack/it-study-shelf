@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertStudyMaterial, InsertUser, studyMaterials, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,37 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function listStudyMaterials(filters?: { subject?: string; semester?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [];
+  if (filters?.subject) conditions.push(eq(studyMaterials.subject, filters.subject));
+  if (filters?.semester) conditions.push(eq(studyMaterials.semester, filters.semester));
+
+  return db
+    .select()
+    .from(studyMaterials)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(studyMaterials.createdAt));
+}
+
+export async function getStudyMaterialById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(studyMaterials).where(eq(studyMaterials.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createStudyMaterial(material: InsertStudyMaterial) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const result = await db.insert(studyMaterials).values(material);
+  return Number(result[0].insertId);
+}
+
+export async function deleteStudyMaterial(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  await db.delete(studyMaterials).where(eq(studyMaterials.id, id));
+}
