@@ -17,3 +17,7 @@
 - [x] Add/update Vitest coverage for list, detail, validation, and role-based access control procedures
 - [x] Run type checks, tests, and visual verification; refine responsive polish; documented storage deletion limitation
 - [x] Save final checkpoint and deliver project version
+
+- [x] Remove the application-level 15 MB upload rejection and support larger admin materials within the increased 200 MB application transport ceiling
+- [x] Make repeated uploads resilient with clear success/error handling and cache refresh without losing existing materials
+- [x] Verify persistence behavior in the database-backed material list and preserve materials until explicit admin deletion

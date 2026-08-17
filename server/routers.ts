@@ -45,7 +45,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can upload materials" });
         const fileBuffer = Buffer.from(input.fileBase64, "base64");
-        if (fileBuffer.length > 15 * 1024 * 1024) throw new TRPCError({ code: "BAD_REQUEST", message: "Files must be 15 MB or smaller" });
+        if (!fileBuffer.length) throw new TRPCError({ code: "BAD_REQUEST", message: "The uploaded file is empty" });
         const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "-");
         const uploaded = await storagePut(`study-materials/${ctx.user.id}/${Date.now()}-${safeName}`, fileBuffer, input.mimeType);
         try {

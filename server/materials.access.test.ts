@@ -1,69 +1,74 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
+const storedMaterials: any[] = [];
+const deletedKeys: string[] = [];
+let nextId = 1;
+
+vi.mock("./storage", () => ({
+  storagePut: vi.fn(async (key: string) => ({ key, url: `/manus-storage/${key}` })),
+  storageDelete: vi.fn(async (key: string) => { deletedKeys.push(key); }),
+}));
+
+vi.mock("./db", () => ({
+  listStudyMaterials: vi.fn(async (filters?: { subject?: string; semester?: number }) => storedMaterials.filter(material => (!filters?.subject || material.subject === filters.subject) && (!filters?.semester || material.semester === filters.semester))),
+  getStudyMaterialById: vi.fn(async (id: number) => storedMaterials.find(material => material.id === id)),
+  createStudyMaterial: vi.fn(async (material: any) => { const id = nextId++; storedMaterials.push({ ...material, id }); return id; }),
+  deleteStudyMaterial: vi.fn(async (id: number) => { const index = storedMaterials.findIndex(material => material.id === id); if (index >= 0) storedMaterials.splice(index, 1); }),
+}));
+
 function contextFor(role: "user" | "admin"): TrpcContext {
   return {
-    user: {
-      id: role === "admin" ? 2 : 1,
-      openId: `${role}-open-id`,
-      email: `${role}@example.com`,
-      name: role === "admin" ? "Admin" : "Student",
-      loginMethod: "manus",
-      role,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      lastSignedIn: new Date(),
-    },
+    user: { id: role === "admin" ? 2 : 1, openId: `${role}-open-id`, email: `${role}@example.com`, name: role === "admin" ? "Admin" : "Student", loginMethod: "manus", role, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: {} as TrpcContext["res"],
   };
 }
 
-describe("materials role access", () => {
-  it("returns a material list for a valid subject filter", async () => {
-    const caller = appRouter.createCaller(contextFor("user"));
-    const result = await caller.materials.list({ subject: "OS", semester: 2 });
-    expect(Array.isArray(result)).toBe(true);
+const uploadInput = (title: string, subject: string, semester: number) => ({
+  title,
+  subject,
+  semester,
+  description: `A detailed ${title} resource for semester ${semester}.`,
+  fileName: `${title.toLowerCase().replaceAll(" ", "-")}.pdf`,
+  mimeType: "application/pdf" as const,
+  fileBase64: "aGVsbG8=",
+});
+
+describe("materials persistence and role access", () => {
+  beforeEach(() => { storedMaterials.length = 0; deletedKeys.length = 0; nextId = 1; });
+
+  it("keeps multiple sequential admin uploads in the library", async () => {
+    const caller = appRouter.createCaller(contextFor("admin"));
+    await caller.materials.upload(uploadInput("Data Structures Notes", "Data Structures", 2));
+    await caller.materials.upload(uploadInput("Routing Fundamentals", "Networking", 4));
+    await caller.materials.upload(uploadInput("Process Scheduling", "OS", 3));
+    const all = await caller.materials.list();
+    expect(all).toHaveLength(3);
+    expect(all.map(material => material.title)).toEqual(["Data Structures Notes", "Routing Fundamentals", "Process Scheduling"]);
   });
 
-  it("returns not found for a missing material detail", async () => {
+  it("preserves uploaded records through filtered reads until admin deletion", async () => {
+    const caller = appRouter.createCaller(contextFor("admin"));
+    const created = await caller.materials.upload(uploadInput("Network Security Guide", "Networking", 5));
+    const filtered = await caller.materials.list({ subject: "Networking", semester: 5 });
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]?.title).toBe("Network Security Guide");
+    await caller.materials.delete({ id: created.id });
+    expect(await caller.materials.list()).toHaveLength(0);
+    expect(deletedKeys).toHaveLength(1);
+  });
+
+  it("denies students from uploading or deleting", async () => {
     const caller = appRouter.createCaller(contextFor("user"));
-    await expect(caller.materials.getById({ id: 999999 })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(caller.materials.upload(uploadInput("Student upload", "OS", 2))).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.materials.delete({ id: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("rejects invalid semester input before reaching storage", async () => {
     const caller = appRouter.createCaller(contextFor("admin"));
-    await expect(caller.materials.upload({
-      title: "Invalid semester",
-      subject: "OS",
-      semester: 9,
-      description: "A valid description that should fail validation.",
-      fileName: "notes.pdf",
-      mimeType: "application/pdf",
-      fileBase64: "aGVsbG8=",
-    })).rejects.toMatchObject({ code: "BAD_REQUEST" });
-  });
-  it("denies students from uploading", async () => {
-    const caller = appRouter.createCaller(contextFor("user"));
-    await expect(caller.materials.upload({
-      title: "Student upload",
-      subject: "OS",
-      semester: 2,
-      description: "A valid description for a test upload.",
-      fileName: "notes.pdf",
-      mimeType: "application/pdf",
-      fileBase64: "dGVzdA==",
-    })).rejects.toMatchObject({ code: "FORBIDDEN" });
-  });
-
-  it("denies students from deleting", async () => {
-    const caller = appRouter.createCaller(contextFor("user"));
-    await expect(caller.materials.delete({ id: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
-  });
-
-  it("allows admins past role gating before validating the record", async () => {
-    const caller = appRouter.createCaller(contextFor("admin"));
-    await expect(caller.materials.delete({ id: 999999 })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(caller.materials.upload(uploadInput("Invalid semester", "OS", 9))).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(storedMaterials).toHaveLength(0);
   });
 });
