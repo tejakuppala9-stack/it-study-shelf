@@ -91,3 +91,14 @@
 
 - [x] Add a blue Read/View action to each Admin published-material row that opens the material viewer
 - [x] Re-verify Read/View navigation from both student cards and Admin material rows
+
+- [x] Diagnose why uploaded PDFs do not open in the in-browser viewer
+- [x] Make PDF/document viewing reliable with a working direct-open fallback
+- [x] Verify PDF viewing with type checks, tests, build, and browser/runtime checks
+
+- [x] Exercise a real uploaded PDF from the UI and verify the embedded preview or direct-open fallback after clicking Read/Open
+- [x] Add targeted automated coverage for the storage proxy’s inline PDF headers and content type
+- [x] Add explicit viewer error handling that keeps the direct-open fallback visible if iframe rendering fails
+
+- [x] Exercise a real uploaded PDF by clicking the app’s Read/Open control and confirm the end-to-end viewer or fallback path
+- [x] Capture end-to-end verification evidence for the /materials/:id viewer path from the app UI

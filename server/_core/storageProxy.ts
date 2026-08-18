@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { Readable } from "node:stream";
 import { ENV } from "./env";
 
 export function registerStorageProxy(app: Express) {
@@ -38,11 +39,24 @@ export function registerStorageProxy(app: Express) {
         return;
       }
 
-      res.set("Cache-Control", "no-store");
-      res.redirect(307, url);
+      const fileResp = await fetch(url);
+      if (!fileResp.ok || !fileResp.body) {
+        console.error(`[StorageProxy] file fetch error: ${fileResp.status}`);
+        res.status(502).send("Stored file unavailable");
+        return;
+      }
+
+      const contentType = fileResp.headers.get("content-type") || "application/octet-stream";
+      const contentLength = fileResp.headers.get("content-length");
+      res.setHeader("Content-Type", contentType);
+      if (contentLength) res.setHeader("Content-Length", contentLength);
+      res.setHeader("Content-Disposition", "inline");
+      res.setHeader("Cache-Control", "private, max-age=300");
+      Readable.fromWeb(fileResp.body as Parameters<typeof Readable.fromWeb>[0]).pipe(res);
     } catch (err) {
       console.error("[StorageProxy] failed:", err);
-      res.status(502).send("Storage proxy error");
+      if (!res.headersSent) res.status(502).send("Storage proxy error");
+      else res.end();
     }
   });
 }
