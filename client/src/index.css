@@ -188,3 +188,101 @@
     }
   }
 }
+
+/* Obsidian Minimalist — StudyShelf visual system */
+:root {
+  --obsidian: #0a0a0a;
+  --graphite: #121212;
+  --graphite-soft: #171717;
+  --titanium: #f5f5f4;
+  --titanium-muted: #a3a3a3;
+  --hairline: #262626;
+  --silver: #d4d4d4;
+  --cursor-x: 50vw;
+  --cursor-y: 50vh;
+}
+
+html {
+  background: var(--obsidian);
+}
+
+body {
+  background: var(--obsidian) !important;
+  color: var(--titanium) !important;
+  background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px) !important;
+  background-size: 48px 48px !important;
+}
+
+body::before {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background: radial-gradient(circle 220px at var(--cursor-x) var(--cursor-y), rgba(255,255,255,.07), transparent 72%);
+  mix-blend-mode: screen;
+  opacity: .75;
+}
+
+/* Convert the existing light utility surfaces to graphite glass without rewriting feature markup. */
+[class*="bg-[#f7f8fc]"], [class*="bg-white"] { background-color: rgba(18,18,18,.82) !important; }
+[class*="bg-[#f5f7fb]"], [class*="bg-slate-50"] { background-color: rgba(23,23,23,.9) !important; }
+[class*="bg-[#16243f]"] { background-color: #0a0a0a !important; }
+[class*="bg-[#eef2ff]"], [class*="bg-[#eff2ff]"], [class*="bg-[#dfe7ff]"] { background-color: #202020 !important; }
+[class*="bg-emerald-50"] { background-color: #142019 !important; }
+[class*="bg-rose-50"] { background-color: #241616 !important; }
+[class*="text-slate-950"], [class*="text-slate-900"], [class*="text-slate-800"], [class*="text-slate-700"], [class*="text-slate-600"] { color: var(--titanium) !important; }
+[class*="text-slate-500"], [class*="text-slate-400"], [class*="text-slate-300"] { color: var(--titanium-muted) !important; }
+[class*="text-[#5469d4]"], [class*="text-[#4053b8]"], [class*="text-[#aebcff]"] { color: var(--silver) !important; }
+[class*="border-slate-200"], [class*="border-slate-100"], [class*="border-[#aebcff]"] { border-color: var(--hairline) !important; }
+[class*="border-dashed"] { border-color: #3a3a3a !important; }
+input, textarea, select { color: var(--titanium) !important; background-color: #171717 !important; border-color: var(--hairline) !important; }
+input::placeholder, textarea::placeholder { color: #737373 !important; }
+
+.tilt-card {
+  position: relative;
+  transform-style: preserve-3d;
+  will-change: transform;
+  border: 1px solid rgba(255,255,255,.09) !important;
+  box-shadow: 0 24px 70px rgba(0,0,0,.32), inset 0 1px rgba(255,255,255,.035) !important;
+}
+.tilt-card::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  border-radius: inherit;
+  background: radial-gradient(circle at var(--sheen-x, 50%) var(--sheen-y, 0%), rgba(255,255,255,.14), transparent 34%);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+.tilt-card:hover::after { opacity: 1; }
+
+button, a, .rounded-full { transition: transform 180ms cubic-bezier(.23,1,.32,1), color 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease; }
+button:hover, a:hover { text-shadow: 0 0 18px rgba(255,255,255,.16); }
+[class*="rounded-full"] { animation: obsidian-float 5s ease-in-out infinite; }
+
+@keyframes obsidian-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  body::before { display: none; }
+}
+
+@media (pointer: coarse) {
+  body::before { display: none; }
+}
+
+.portal-card {
+  position: relative;
+  transform-style: preserve-3d;
+}
+.portal-card:hover {
+  transform: perspective(900px) rotateX(1deg) rotateY(-1deg) translateY(-4px) !important;
+}
+.float-action {
+  animation: obsidian-float 5s ease-in-out infinite;
+}
+.float-action:hover {
+  animation-play-state: paused;
+}

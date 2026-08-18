@@ -71,3 +71,10 @@
 - [x] Add persistent like records bound to a server-trusted Student-ID cookie or authenticated admin identity
 - [x] Show like icon and count on material cards, detail pages, and admin material lists
 - [x] Add tests for academic-year/two-semester validation, duplicate-like prevention, repeated like/unlike toggles, and public Student-ID cookie issuance
+
+- [x] Apply Obsidian Minimalist noir palette with #0a0a0a background, titanium typography, graphite glass cards, and silver hairline dividers
+- [x] Add a subtle monochrome grid texture and consistent dark branded surfaces across portal, dashboard, admin, and document views
+- [x] Add interactive 3D perspective tilt with specular sheen to material cards and both portal cards
+- [x] Add restrained floating micro-animations to badges, portal buttons, and action pills
+- [x] Add a fluid monochrome cursor spotlight that respects touch devices and reduced-motion preferences
+- [x] Verify readable contrast, reduced-motion fallback, desktop and mobile responsive behavior, type checks, tests, and production build
