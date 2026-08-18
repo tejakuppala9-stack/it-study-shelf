@@ -52,3 +52,11 @@
 - [x] Add an admin password gate before rendering the Admin Panel
 - [x] Keep existing admin role authorization and student denial behavior intact
 - [x] Add tests for correct and incorrect admin password handling
+
+- [x] Replace the portal hero copy with a clear centered circular StudyShelf logo mark
+- [x] Add distinct visual logo treatments for Student Portal and Admin Portal
+- [x] Remove the student email field from the admin student-registration form and import requirements
+- [x] Replace subject filter options with CSE, AI&DS, CS, EEE, IT, AI&ML, and ECE
+- [x] Verify portal and dashboard responsiveness after the branding changes
+
+- [x] Verify dashboard and Admin Portal password gate at 390px mobile width; cards stack cleanly and controls remain readable

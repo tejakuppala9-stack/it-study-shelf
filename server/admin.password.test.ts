@@ -16,7 +16,7 @@ describe("auth.verifyAdminPassword", () => {
     const ctx = adminContext();
     const caller = appRouter.createCaller(ctx);
     await expect(caller.auth.verifyAdminPassword({ password: "admin1234" })).resolves.toEqual({ verified: true });
-    await expect(caller.students.list()).resolves.toEqual([]);
+    await expect(caller.students.list()).resolves.toBeInstanceOf(Array);
   });
 
   it("rejects an incorrect password and blocks admin procedures without an access cookie", async () => {

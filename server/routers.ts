@@ -68,11 +68,11 @@ export const appRouter = router({
         return { verified: true, studentId: student.studentId, fullName: student.fullName };
       }),
     add: adminPortalProcedure
-      .input(z.object({ studentId: z.string().trim().min(2).max(100), fullName: z.string().trim().min(2).max(255), email: z.string().email(), semester: z.number().int().min(1).max(8).optional(), year: z.number().int().min(1).max(4), department: z.string().trim().min(2).max(160) }))
+      .input(z.object({ studentId: z.string().trim().min(2).max(100), fullName: z.string().trim().min(2).max(255), email: z.string().email().optional(), semester: z.number().int().min(1).max(8).optional(), year: z.number().int().min(1).max(4), department: z.string().trim().min(2).max(160) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can manage student IDs" });
         if (await getStudentByStudentId(input.studentId)) throw new TRPCError({ code: "CONFLICT", message: "That student ID is already registered" });
-        const id = await createStudentRegistryRecord({ ...input, email: input.email || null, createdBy: ctx.user.id });
+        const id = await createStudentRegistryRecord({ ...input, email: input.email ?? null, createdBy: ctx.user.id });
         return { id };
       }),
     importExcel: adminPortalProcedure
@@ -90,7 +90,7 @@ export const appRouter = router({
           const normalized = Object.fromEntries(Object.entries(row).map(([key, value]) => [key.toLowerCase().replace(/[\s_-]/g, ""), String(value ?? "").trim()]));
           const studentId = normalized.studentid || normalized.id || "";
           const fullName = normalized.fullname || normalized.name || "";
-          if (!studentId || !fullName || !normalized.email || !(normalized.branch || normalized.department) || !normalized.year) { errors.push(`Row ${index + 2}: studentId, fullName, email, branch, and year are required`); continue; }
+          if (!studentId || !fullName || !(normalized.branch || normalized.department) || !normalized.year) { errors.push(`Row ${index + 2}: studentId, fullName, branch, and year are required`); continue; }
           if (await getStudentByStudentId(studentId)) { skipped += 1; continue; }
           const semesterValue = normalized.semester ? Number(normalized.semester) : undefined;
           const yearValue = normalized.year ? Number(normalized.year) : undefined;
