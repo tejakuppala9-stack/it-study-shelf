@@ -85,3 +85,9 @@
 - [x] Persist and validate the provider name in the study-material database and upload procedure, with provider-aware Drizzle filtering
 - [x] Display provider names on student material cards, detail pages, admin material rows, and search results
 - [x] Add provider-aware material search, database/detail assertions, tests, build, and responsive presentation
+
+- [x] Add a blue Read/View action to every uploaded material card that opens the in-browser document viewer
+- [x] Verify viewer navigation, responsive styling, tests, and production build
+
+- [x] Add a blue Read/View action to each Admin published-material row that opens the material viewer
+- [x] Re-verify Read/View navigation from both student cards and Admin material rows
