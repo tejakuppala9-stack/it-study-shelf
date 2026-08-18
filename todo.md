@@ -60,3 +60,8 @@
 - [x] Verify portal and dashboard responsiveness after the branding changes
 
 - [x] Verify dashboard and Admin Portal password gate at 390px mobile width; cards stack cleanly and controls remain readable
+
+- [x] Add student search above the registered-student list for ID, name, and branch lookup
+- [x] Add published-material search for title, subject, and filename lookup
+- [x] Collapse registered-student information by default with a View student list control
+- [x] Add filtered empty states and verify admin-panel responsiveness
