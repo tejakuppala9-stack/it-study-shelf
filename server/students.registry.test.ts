@@ -48,11 +48,13 @@ describe("student registry", () => {
     expect(records).toHaveLength(1);
   });
 
-  it("rejects mismatched name, branch, or year details", async () => {
+  it("verifies access using only an approved student ID", async () => {
     const admin = appRouter.createCaller(contextFor("admin"));
     await admin.students.add({ studentId: "IT-006", fullName: "Riya Menon", email: "asha@example.com", year: 3, department: "Information Technology" });
     const student = appRouter.createCaller(contextFor("user"));
-    await expect(student.students.verify({ studentId: "IT-006", fullName: "Wrong Name", branch: "Information Technology", year: 3 })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(student.students.verify({ studentId: "IT-006" })).resolves.toMatchObject({ verified: true, studentId: "IT-006" });
+    const publicStudent = appRouter.createCaller({ user: undefined, req: {} as TrpcContext["req"], res: {} as TrpcContext["res"] });
+    await expect(publicStudent.students.verifyPublic({ studentId: "IT-006" })).resolves.toMatchObject({ verified: true, studentId: "IT-006" });
   });
 
   it("keeps IDs until admin deletion and blocks unregistered students", async () => {

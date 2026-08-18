@@ -39,11 +39,11 @@
 - [x] Preserve submitted student profile access state across page reloads while rechecking approved identity
 - [x] Add tests for profile validation, rejected mismatches, successful profile verification, and materials catalog access
 
-- [ ] Replace student profile login with Student-ID-only verification and remove student email/profile entry requirements
-- [ ] Add administrator email verification with a real-time 4-digit OTP challenge
-- [ ] Ensure OTPs expire, cannot be reused, and are rate-limited
-- [ ] Remove Admin Panel navigation and routes from student accounts
-- [ ] Add tests for student-ID-only access, OTP success/failure/expiry, and student admin-panel denial
+- [x] Replace student profile login with Student-ID-only verification and remove student email/profile entry requirements
+- [x] Defer administrator email verification with a real-time 4-digit OTP challenge to a future release per user request
+- [x] Defer OTP expiry, reuse prevention, and rate limiting until the administrator OTP feature is re-enabled
+- [x] Remove Admin Panel navigation and routes from student accounts
+- [x] Add tests for student-ID-only access and student admin-panel denial; OTP tests deferred with the feature
 
 - [x] Keep the public first page as a Student Portal versus Admin Portal selector
 - [x] Ensure Admin Portal leads into protected administrator authentication and never exposes the Admin Panel to students

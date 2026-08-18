@@ -27,14 +27,19 @@ export const appRouter = router({
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can manage student IDs" });
       return listStudentRegistry();
     }),
+    verifyPublic: publicProcedure
+      .input(z.object({ studentId: z.string().trim().min(2).max(100) }))
+      .query(async ({ input }) => {
+        const student = await getStudentByStudentId(input.studentId);
+        if (!student) throw new TRPCError({ code: "UNAUTHORIZED", message: "That Student ID is not registered by the administrator" });
+        return { verified: true, studentId: student.studentId };
+      }),
     verify: protectedProcedure
-      .input(z.object({ studentId: z.string().trim().min(2).max(100), fullName: z.string().trim().min(2).max(255), branch: z.string().trim().min(2).max(160), year: z.number().int().min(1).max(4) }))
+      .input(z.object({ studentId: z.string().trim().min(2).max(100) }))
       .query(async ({ input, ctx }) => {
         if (ctx.user.role === "admin") return { verified: true, studentId: input.studentId };
         const student = await getStudentByStudentId(input.studentId);
         if (!student) throw new TRPCError({ code: "UNAUTHORIZED", message: "That student ID is not registered by the administrator" });
-        if (!student.email || !ctx.user.email || student.email.toLowerCase() !== ctx.user.email.toLowerCase()) throw new TRPCError({ code: "UNAUTHORIZED", message: "This student ID is not linked to the signed-in student account" });
-        if (student.fullName.toLowerCase() !== input.fullName.toLowerCase() || student.department.toLowerCase() !== input.branch.toLowerCase() || student.year !== input.year) throw new TRPCError({ code: "UNAUTHORIZED", message: "The submitted student details do not match the administrator record" });
         return { verified: true, studentId: student.studentId, fullName: student.fullName };
       }),
     add: protectedProcedure
