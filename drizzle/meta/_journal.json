@@ -15,6 +15,13 @@
       "when": 1786987696631,
       "tag": "0001_rapid_odin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1787027767728,
+      "tag": "0002_ancient_enchantress",
+      "breakpoints": true
     }
   ]
 }

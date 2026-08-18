@@ -21,3 +21,10 @@
 - [x] Remove the application-level 15 MB upload rejection and support larger admin materials within the increased 200 MB application transport ceiling
 - [x] Make repeated uploads resilient with clear success/error handling and cache refresh without losing existing materials
 - [x] Verify persistence behavior in the database-backed material list and preserve materials until explicit admin deletion
+
+- [x] Add persistent student registry table for admin-approved student IDs and profile information
+- [x] Add admin-only single student registration and deletion procedures
+- [x] Add admin-only Excel student-ID import with validation, duplicate handling, and clear results
+- [x] Add admin student registry UI for single entry, Excel upload, listing, and deletion
+- [x] Validate student login/registration against the admin-approved student ID registry and matching signed-in account email
+- [x] Add tests for registry persistence, Excel import validation, duplicate handling, email binding, deleted-ID revalidation, and role separation

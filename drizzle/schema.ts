@@ -43,3 +43,18 @@ export const studyMaterials = mysqlTable("studyMaterials", {
 
 export type StudyMaterial = typeof studyMaterials.$inferSelect;
 export type InsertStudyMaterial = typeof studyMaterials.$inferInsert;
+
+export const studentRegistry = mysqlTable("studentRegistry", {
+  id: int("id").autoincrement().primaryKey(),
+  studentId: varchar("studentId", { length: 100 }).notNull().unique(),
+  fullName: varchar("fullName", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  semester: int("semester"),
+  department: varchar("department", { length: 160 }).default("Information Technology").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdBy: int("createdBy").notNull(),
+});
+
+export type StudentRegistryRecord = typeof studentRegistry.$inferSelect;
+export type InsertStudentRegistryRecord = typeof studentRegistry.$inferInsert;

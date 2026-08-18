@@ -3,7 +3,8 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createStudyMaterial, deleteStudyMaterial, getStudyMaterialById, listStudyMaterials } from "./db";
+import * as XLSX from "xlsx";
+import { createStudyMaterial, createStudentRegistryRecord, deleteStudyMaterial, deleteStudentRegistryRecord, getStudyMaterialById, getStudentByStudentId, listStudyMaterials, listStudentRegistry } from "./db";
 import { storageDelete, storagePut } from "./storage";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 
@@ -19,6 +20,61 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+  }),
+
+  students: router({
+    list: protectedProcedure.query(({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can manage student IDs" });
+      return listStudentRegistry();
+    }),
+    verify: protectedProcedure
+      .input(z.object({ studentId: z.string().trim().min(2).max(100) }))
+      .query(async ({ input, ctx }) => {
+        if (ctx.user.role === "admin") return { verified: true, studentId: input.studentId };
+        const student = await getStudentByStudentId(input.studentId);
+        if (!student) throw new TRPCError({ code: "UNAUTHORIZED", message: "That student ID is not registered by the administrator" });
+        if (!student.email || !ctx.user.email || student.email.toLowerCase() !== ctx.user.email.toLowerCase()) throw new TRPCError({ code: "UNAUTHORIZED", message: "This student ID is not linked to the signed-in student account" });
+        return { verified: true, studentId: student.studentId, fullName: student.fullName };
+      }),
+    add: protectedProcedure
+      .input(z.object({ studentId: z.string().trim().min(2).max(100), fullName: z.string().trim().min(2).max(255), email: z.string().email(), semester: z.number().int().min(1).max(8).optional(), department: z.string().trim().min(2).max(160).default("Information Technology") }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can manage student IDs" });
+        if (await getStudentByStudentId(input.studentId)) throw new TRPCError({ code: "CONFLICT", message: "That student ID is already registered" });
+        const id = await createStudentRegistryRecord({ ...input, email: input.email || null, createdBy: ctx.user.id });
+        return { id };
+      }),
+    importExcel: protectedProcedure
+      .input(z.object({ fileBase64: z.string().min(1), fileName: z.string().min(1) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can manage student IDs" });
+        const workbook = XLSX.read(Buffer.from(input.fileBase64, "base64"), { type: "buffer" });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0] || ""];
+        if (!firstSheet) throw new TRPCError({ code: "BAD_REQUEST", message: "The Excel file has no worksheet" });
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: "" });
+        if (!rows.length) throw new TRPCError({ code: "BAD_REQUEST", message: "The Excel sheet has no student rows" });
+        let added = 0; let skipped = 0; const errors: string[] = [];
+        for (let index = 0; index < rows.length; index += 1) {
+          const row = rows[index];
+          const normalized = Object.fromEntries(Object.entries(row).map(([key, value]) => [key.toLowerCase().replace(/[\s_-]/g, ""), String(value ?? "").trim()]));
+          const studentId = normalized.studentid || normalized.id || "";
+          const fullName = normalized.fullname || normalized.name || "";
+          if (!studentId || !fullName || !normalized.email) { errors.push(`Row ${index + 2}: studentId, fullName, and email are required`); continue; }
+          if (await getStudentByStudentId(studentId)) { skipped += 1; continue; }
+          const semesterValue = normalized.semester ? Number(normalized.semester) : undefined;
+          if (semesterValue !== undefined && (!Number.isInteger(semesterValue) || semesterValue < 1 || semesterValue > 8)) { errors.push(`Row ${index + 2}: semester must be between 1 and 8`); continue; }
+          await createStudentRegistryRecord({ studentId, fullName, email: normalized.email || null, semester: semesterValue, department: normalized.department || "Information Technology", createdBy: ctx.user.id });
+          added += 1;
+        }
+        return { added, skipped, errors };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can manage student IDs" });
+        await deleteStudentRegistryRecord(input.id);
+        return { success: true } as const;
+      }),
   }),
 
   materials: router({

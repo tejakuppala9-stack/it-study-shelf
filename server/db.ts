@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertStudyMaterial, InsertUser, studyMaterials, users } from "../drizzle/schema";
+import { InsertStudentRegistryRecord, InsertStudyMaterial, InsertUser, studentRegistry, studyMaterials, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -122,4 +122,30 @@ export async function deleteStudyMaterial(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database is not available");
   await db.delete(studyMaterials).where(eq(studyMaterials.id, id));
+}
+
+export async function listStudentRegistry() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(studentRegistry).orderBy(desc(studentRegistry.createdAt));
+}
+
+export async function getStudentByStudentId(studentId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(studentRegistry).where(eq(studentRegistry.studentId, studentId)).limit(1);
+  return result[0];
+}
+
+export async function createStudentRegistryRecord(record: InsertStudentRegistryRecord) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const result = await db.insert(studentRegistry).values(record);
+  return Number(result[0].insertId);
+}
+
+export async function deleteStudentRegistryRecord(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  await db.delete(studentRegistry).where(eq(studentRegistry.id, id));
 }
