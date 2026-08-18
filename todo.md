@@ -28,3 +28,8 @@
 - [x] Add admin student registry UI for single entry, Excel upload, listing, and deletion
 - [x] Validate student login/registration against the admin-approved student ID registry and matching signed-in account email
 - [x] Add tests for registry persistence, Excel import validation, duplicate handling, email binding, deleted-ID revalidation, and role separation
+
+- [x] Replace the email-oriented entry screen with separate Student Login and Admin Login choices
+- [x] Route Student Login to approved student-ID verification without exposing an email-login option
+- [x] Route Admin Login to the administrator authentication flow and keep admin controls role-gated
+- [x] Verify responsive front-page role presentation and role-specific access behavior, including mobile review and admin redirect wiring

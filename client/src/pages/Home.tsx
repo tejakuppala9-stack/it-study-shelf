@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Link, useLocation, useRoute } from "wouter";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BookOpen, ChevronRight, FileSpreadsheet, FileText, FolderOpen, LayoutGrid, Library, LogOut, Plus, Search, ShieldCheck, Trash2, UploadCloud, UserPlus, X } from "lucide-react";
 
 const subjects = ["All subjects", "Data Structures", "Networking", "OS", "Database Systems", "Web Development", "Computer Architecture"];
@@ -107,11 +107,17 @@ function StudentSessionGate({ children }: { children: React.ReactNode }) {
 }
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [, params] = useRoute("/materials/:id");
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  useEffect(() => {
+    if (!user || sessionStorage.getItem("studyshelf-login-mode") !== "admin") return;
+    sessionStorage.removeItem("studyshelf-login-mode");
+    if (user.role === "admin" && location !== "/admin") setLocation("/admin");
+  }, [user, location, setLocation]);
   if (loading) return <div className="grid min-h-screen place-items-center bg-[#f7f8fc] text-sm text-slate-400">Preparing your library…</div>;
-  if (!user) return <div className="grid min-h-screen place-items-center bg-[#16243f] px-6 text-center text-white"><div className="max-w-md"><span className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-white/10"><BookOpen className="h-8 w-8" /></span><h1 className="mt-7 text-4xl font-semibold tracking-tight">Your IT library, ready when you are.</h1><p className="mt-4 text-sm leading-6 text-slate-300">Sign in to explore course materials, revision notes, and reference documents curated for your program.</p><Button onClick={() => startLogin()} className="mt-8 h-12 rounded-xl bg-white px-6 text-sm font-semibold text-[#16243f] hover:bg-slate-100">Continue to StudyShelf <ChevronRight className="ml-2 h-4 w-4" /></Button></div></div>;
+  if (!user) return <div className="min-h-screen bg-[#16243f] px-6 py-10 text-white sm:py-16"><div className="mx-auto max-w-5xl"><div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10"><BookOpen className="h-5 w-5" /></span><div><p className="text-sm font-semibold tracking-tight">StudyShelf</p><p className="text-[11px] text-slate-400">IT learning library</p></div></div><div className="mx-auto mt-20 max-w-2xl text-center"><p className="text-xs font-bold uppercase tracking-[0.24em] text-[#aebcff]">Welcome to your IT library</p><h1 className="mt-5 text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Choose how you want to enter.</h1><p className="mx-auto mt-5 max-w-lg text-sm leading-6 text-slate-300">Access organized IT study materials, revision resources, and course documents from one focused workspace.</p></div><div className="mx-auto mt-12 grid max-w-3xl gap-5 md:grid-cols-2"><button onClick={() => { sessionStorage.setItem("studyshelf-login-mode", "student"); startLogin(); }} className="group rounded-[26px] border border-white/10 bg-white p-7 text-left text-slate-900 shadow-2xl shadow-black/10 transition hover:-translate-y-1 hover:bg-[#f7f8ff]"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#eff2ff] text-[#5469d4]"><BookOpen className="h-6 w-6" /></span><h2 className="mt-7 text-xl font-semibold tracking-tight">Student Login</h2><p className="mt-2 text-sm leading-6 text-slate-500">Enter with your approved student ID and explore the study library.</p><span className="mt-7 inline-flex items-center text-sm font-semibold text-[#4053b8]">Continue as student <ChevronRight className="ml-2 h-4 w-4 transition group-hover:translate-x-1" /></span></button><button onClick={() => { sessionStorage.setItem("studyshelf-login-mode", "admin"); startLogin(); }} className="group rounded-[26px] border border-white/10 bg-[#263c65] p-7 text-left text-white transition hover:-translate-y-1 hover:bg-[#304b7d]"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10 text-[#c5ceff]"><ShieldCheck className="h-6 w-6" /></span><h2 className="mt-7 text-xl font-semibold tracking-tight">Admin Login</h2><p className="mt-2 text-sm leading-6 text-slate-300">Manage study materials, register students, and curate the library.</p><span className="mt-7 inline-flex items-center text-sm font-semibold text-[#c5ceff]">Continue as admin <ChevronRight className="ml-2 h-4 w-4 transition group-hover:translate-x-1" /></span></button></div><p className="mt-10 text-center text-xs text-slate-500">Student access is limited to IDs registered by an administrator.</p></div></div>;
+  if (user && sessionStorage.getItem("studyshelf-login-mode") === "admin" && user.role !== "admin") return <div className="grid min-h-screen place-items-center bg-[#16243f] px-6"><Card className="w-full max-w-md border-0 bg-white p-8 text-center"><ShieldCheck className="mx-auto h-10 w-10 text-rose-400" /><h1 className="mt-5 text-2xl font-semibold text-slate-800">Administrator access required</h1><p className="mt-2 text-sm leading-6 text-slate-500">This account is not approved for the administrator panel.</p><Button onClick={() => { sessionStorage.removeItem("studyshelf-login-mode"); void logout(); }} className="mt-6 bg-[#16243f]">Return to login</Button></Card></div>;
   const content = location === "/admin" ? <AdminPanel /> : params?.id ? <MaterialDetail id={Number(params.id)} /> : <Dashboard />;
   if (user.role !== "admin") return <StudentSessionGate>{content}</StudentSessionGate>;
   return <AppShell>{content}</AppShell>;
