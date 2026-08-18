@@ -56,7 +56,7 @@ describe("student registry", () => {
     await admin.students.add({ studentId: "IT-006", fullName: "Riya Menon", email: "asha@example.com", year: 3, department: "Information Technology" });
     const student = appRouter.createCaller(contextFor("user"));
     await expect(student.students.verify({ studentId: "IT-006" })).resolves.toMatchObject({ verified: true, studentId: "IT-006" });
-    const publicStudent = appRouter.createCaller({ user: undefined, req: {} as TrpcContext["req"], res: {} as TrpcContext["res"] });
+    const publicStudent = appRouter.createCaller({ user: undefined, req: {} as TrpcContext["req"], res: { cookie: () => undefined } as TrpcContext["res"] });
     await expect(publicStudent.students.verifyPublic({ studentId: "IT-006" })).resolves.toMatchObject({ verified: true, studentId: "IT-006" });
   });
 

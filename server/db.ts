@@ -1,6 +1,6 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertStudentRegistryRecord, InsertStudyMaterial, InsertUser, studentRegistry, studyMaterials, users } from "../drizzle/schema";
+import { InsertStudentRegistryRecord, InsertStudyMaterial, InsertUser, materialLikes, studentRegistry, studyMaterials, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -97,18 +97,20 @@ export async function listStudyMaterials(filters?: { subject?: string; semester?
   if (filters?.subject) conditions.push(eq(studyMaterials.subject, filters.subject));
   if (filters?.semester) conditions.push(eq(studyMaterials.semester, filters.semester));
 
-  return db
-    .select()
-    .from(studyMaterials)
-    .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(desc(studyMaterials.createdAt));
+  const materials = await db.select().from(studyMaterials).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(studyMaterials.createdAt));
+  if (!materials.length) return materials;
+  const counts = await db.select({ materialId: materialLikes.materialId, likes: count(materialLikes.id) }).from(materialLikes).where(inArray(materialLikes.materialId, materials.map(material => material.id))).groupBy(materialLikes.materialId);
+  const countMap = new Map(counts.map(row => [row.materialId, Number(row.likes)]));
+  return materials.map(material => ({ ...material, likeCount: countMap.get(material.id) || 0 }));
 }
 
 export async function getStudyMaterialById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(studyMaterials).where(eq(studyMaterials.id, id)).limit(1);
-  return result[0];
+  if (!result[0]) return undefined;
+  const [likes] = await db.select({ likes: count(materialLikes.id) }).from(materialLikes).where(eq(materialLikes.materialId, id));
+  return { ...result[0], likeCount: Number(likes?.likes || 0) };
 }
 
 export async function createStudyMaterial(material: InsertStudyMaterial) {
@@ -121,7 +123,18 @@ export async function createStudyMaterial(material: InsertStudyMaterial) {
 export async function deleteStudyMaterial(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database is not available");
+  await db.delete(materialLikes).where(eq(materialLikes.materialId, id));
   await db.delete(studyMaterials).where(eq(studyMaterials.id, id));
+}
+
+export async function toggleStudyMaterialLike(materialId: number, actorKey: string, userId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const existing = await db.select().from(materialLikes).where(and(eq(materialLikes.materialId, materialId), eq(materialLikes.actorKey, actorKey))).limit(1);
+  if (existing[0]) await db.delete(materialLikes).where(eq(materialLikes.id, existing[0].id));
+  else await db.insert(materialLikes).values({ materialId, userId: userId ?? null, actorKey });
+  const [likes] = await db.select({ likes: count(materialLikes.id) }).from(materialLikes).where(eq(materialLikes.materialId, materialId));
+  return { liked: !existing[0], likeCount: Number(likes?.likes || 0) };
 }
 
 export async function listStudentRegistry() {

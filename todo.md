@@ -65,3 +65,9 @@
 - [x] Add published-material search for title, subject, and filename lookup
 - [x] Collapse registered-student information by default with a View student list control
 - [x] Add filtered empty states and verify admin-panel responsiveness
+
+- [x] Add academic year metadata to every uploaded study material
+- [x] Replace material semester choices with only 1st semester and 2nd semester
+- [x] Add persistent like records bound to a server-trusted Student-ID cookie or authenticated admin identity
+- [x] Show like icon and count on material cards, detail pages, and admin material lists
+- [x] Add tests for academic-year/two-semester validation, duplicate-like prevention, repeated like/unlike toggles, and public Student-ID cookie issuance

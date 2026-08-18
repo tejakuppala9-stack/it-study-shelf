@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, unique } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -30,6 +30,7 @@ export const studyMaterials = mysqlTable("studyMaterials", {
   title: varchar("title", { length: 255 }).notNull(),
   subject: varchar("subject", { length: 120 }).notNull(),
   semester: int("semester").notNull(),
+  academicYear: int("academicYear").notNull(),
   description: text("description").notNull(),
   fileUrl: text("fileUrl").notNull(),
   fileKey: text("fileKey").notNull(),
@@ -43,6 +44,17 @@ export const studyMaterials = mysqlTable("studyMaterials", {
 
 export type StudyMaterial = typeof studyMaterials.$inferSelect;
 export type InsertStudyMaterial = typeof studyMaterials.$inferInsert;
+
+export const materialLikes = mysqlTable("materialLikes", {
+  id: int("id").autoincrement().primaryKey(),
+  materialId: int("materialId").notNull(),
+  userId: int("userId"),
+  actorKey: varchar("actorKey", { length: 190 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({ uniqueMaterialActor: unique("materialLikes_materialId_actorKey").on(table.materialId, table.actorKey) }));
+
+export type MaterialLike = typeof materialLikes.$inferSelect;
+export type InsertMaterialLike = typeof materialLikes.$inferInsert;
 
 export const studentRegistry = mysqlTable("studentRegistry", {
   id: int("id").autoincrement().primaryKey(),

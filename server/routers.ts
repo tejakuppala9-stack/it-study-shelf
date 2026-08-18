@@ -6,11 +6,12 @@ import { z } from "zod";
 import * as XLSX from "xlsx";
 import { parse as parseCookie } from "cookie";
 import { SignJWT, jwtVerify } from "jose";
-import { createStudyMaterial, createStudentRegistryRecord, deleteStudyMaterial, deleteStudentRegistryRecord, getStudyMaterialById, getStudentByStudentId, listStudyMaterials, listStudentRegistry } from "./db";
+import { createStudyMaterial, createStudentRegistryRecord, deleteStudyMaterial, deleteStudentRegistryRecord, getStudyMaterialById, getStudentByStudentId, listStudyMaterials, listStudentRegistry, toggleStudyMaterialLike } from "./db";
 import { storageDelete, storagePut } from "./storage";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 
 const ADMIN_ACCESS_COOKIE = "studyshelf_admin_access";
+const STUDENT_ACCESS_COOKIE = "studyshelf_student_access";
 const adminPortalProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Administrator access required" });
   const token = parseCookie(ctx.req.headers.cookie || "")[ADMIN_ACCESS_COOKIE];
@@ -54,9 +55,13 @@ export const appRouter = router({
     }),
     verifyPublic: publicProcedure
       .input(z.object({ studentId: z.string().trim().min(2).max(100) }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const student = await getStudentByStudentId(input.studentId);
         if (!student) throw new TRPCError({ code: "UNAUTHORIZED", message: "That Student ID is not registered by the administrator" });
+        if (process.env.JWT_SECRET) {
+          const token = await new SignJWT({ purpose: "student-portal", studentId: student.studentId }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("30d").sign(new TextEncoder().encode(process.env.JWT_SECRET));
+          (ctx.res as any).cookie(STUDENT_ACCESS_COOKIE, token, { httpOnly: true, secure: true, sameSite: "none", maxAge: 30 * 24 * 60 * 60 * 1000, path: "/" });
+        }
         return { verified: true, studentId: student.studentId };
       }),
     verify: protectedProcedure
@@ -94,7 +99,7 @@ export const appRouter = router({
           if (await getStudentByStudentId(studentId)) { skipped += 1; continue; }
           const semesterValue = normalized.semester ? Number(normalized.semester) : undefined;
           const yearValue = normalized.year ? Number(normalized.year) : undefined;
-          if (semesterValue !== undefined && (!Number.isInteger(semesterValue) || semesterValue < 1 || semesterValue > 8)) { errors.push(`Row ${index + 2}: semester must be between 1 and 8`); continue; }
+          if (semesterValue !== undefined && (!Number.isInteger(semesterValue) || semesterValue < 1 || semesterValue > 2)) { errors.push(`Row ${index + 2}: semester must be 1 or 2`); continue; }
           if (yearValue !== undefined && (!Number.isInteger(yearValue) || yearValue < 1 || yearValue > 4)) { errors.push(`Row ${index + 2}: year must be between 1 and 4`); continue; }
           await createStudentRegistryRecord({ studentId, fullName, email: normalized.email || null, semester: semesterValue, year: yearValue, department: normalized.branch || normalized.department || "Information Technology", createdBy: ctx.user.id });
           added += 1;
@@ -110,8 +115,22 @@ export const appRouter = router({
   }),
 
   materials: router({
+    like: publicProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user?.role === "admin") return toggleStudyMaterialLike(input.id, `admin:${ctx.user.id}`, ctx.user.id);
+        const token = parseCookie(ctx.req.headers.cookie || "")[STUDENT_ACCESS_COOKIE];
+        if (!token || !process.env.JWT_SECRET) throw new TRPCError({ code: "UNAUTHORIZED", message: "Verify your Student ID before liking materials" });
+        try {
+          const { payload } = await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET), { algorithms: ["HS256"] });
+          if (payload.purpose !== "student-portal" || typeof payload.studentId !== "string") throw new Error("Invalid student session");
+          return toggleStudyMaterialLike(input.id, `student:${payload.studentId}`);
+        } catch {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Verify your Student ID before liking materials" });
+        }
+      }),
     list: publicProcedure
-      .input(z.object({ subject: z.string().optional(), semester: z.number().int().min(1).max(8).optional() }).optional())
+      .input(z.object({ subject: z.string().optional(), semester: z.number().int().min(1).max(2).optional() }).optional())
       .query(({ input }) => listStudyMaterials(input)),
     getById: publicProcedure
       .input(z.object({ id: z.number().int().positive() }))
@@ -124,7 +143,8 @@ export const appRouter = router({
       .input(z.object({
         title: z.string().trim().min(2).max(255),
         subject: z.string().trim().min(2).max(120),
-        semester: z.number().int().min(1).max(8),
+        semester: z.number().int().min(1).max(2),
+        academicYear: z.number().int().min(1).max(4),
         description: z.string().trim().min(10).max(5000),
         fileName: z.string().trim().min(1).max(255),
         mimeType: z.enum(["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]),
@@ -141,6 +161,7 @@ export const appRouter = router({
             title: input.title,
             subject: input.subject,
             semester: input.semester,
+            academicYear: input.academicYear,
             description: input.description,
             fileUrl: uploaded.url,
             fileKey: uploaded.key,

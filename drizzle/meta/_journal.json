@@ -29,6 +29,20 @@
       "when": 1787029341360,
       "tag": "0003_glossy_professor_monster",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1787064268972,
+      "tag": "0004_rich_mach_iv",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1787064467626,
+      "tag": "0005_mysterious_sentry",
+      "breakpoints": true
     }
   ]
 }
