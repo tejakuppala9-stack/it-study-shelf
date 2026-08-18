@@ -78,3 +78,5 @@
 - [x] Add restrained floating micro-animations to badges, portal buttons, and action pills
 - [x] Add a fluid monochrome cursor spotlight that respects touch devices and reduced-motion preferences
 - [x] Verify readable contrast, reduced-motion fallback, desktop and mobile responsive behavior, type checks, tests, and production build
+
+- [x] Replace the heart icon with a thumbs-up icon in all material like controls while preserving counts and toggle behavior

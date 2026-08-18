@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Link, useLocation, useRoute } from "wouter";
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, ChevronRight, FileSpreadsheet, FileText, FolderOpen, Heart, LayoutGrid, Library, LogOut, Plus, Search, ShieldCheck, Trash2, UploadCloud, UserPlus, X } from "lucide-react";
+import { BookOpen, ChevronRight, FileSpreadsheet, FileText, FolderOpen, ThumbsUp, LayoutGrid, Library, LogOut, Plus, Search, ShieldCheck, Trash2, UploadCloud, UserPlus, X } from "lucide-react";
 
 const subjects = ["All subjects", "CSE", "AI&DS", "CS", "EEE", "IT", "AI&ML", "ECE"];
 const semesters = ["All semesters", "1", "2", "3", "4", "5", "6", "7", "8"];
@@ -63,7 +63,7 @@ function LikeButton({ material }: { material: any }) {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(Number(material.likeCount || 0));
   const like = trpc.materials.like.useMutation({ onSuccess: result => { setLiked(result.liked); setLikeCount(result.likeCount); }, onError: error => toast.error(error.message) });
-  return <button type="button" aria-label={`${liked ? "Unlike" : "Like"} ${material.title}`} onClick={event => { event.preventDefault(); event.stopPropagation(); like.mutate({ id: material.id }); }} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${liked ? "bg-rose-50 text-rose-500" : "bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500"}`}><Heart className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />{likeCount}</button>;
+  return <button type="button" aria-label={`${liked ? "Remove usefulness vote from" : "Mark as useful"} ${material.title}`} onClick={event => { event.preventDefault(); event.stopPropagation(); like.mutate({ id: material.id }); }} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${liked ? "bg-rose-50 text-rose-500" : "bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500"}`}><ThumbsUp className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />{likeCount}</button>;
 }
 
 function MaterialCard({ material }: { material: any }) {
