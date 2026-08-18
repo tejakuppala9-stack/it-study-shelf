@@ -50,6 +50,7 @@ export const studentRegistry = mysqlTable("studentRegistry", {
   fullName: varchar("fullName", { length: 255 }).notNull(),
   email: varchar("email", { length: 320 }),
   semester: int("semester"),
+  year: int("year"),
   department: varchar("department", { length: 160 }).default("Information Technology").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

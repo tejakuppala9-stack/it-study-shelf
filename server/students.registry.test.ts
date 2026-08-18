@@ -34,31 +34,39 @@ describe("student registry", () => {
 
   it("persists a single registered student and verifies the ID", async () => {
     const admin = appRouter.createCaller(contextFor("admin"));
-    await admin.students.add({ studentId: "IT-001", fullName: "Asha Rao", email: "asha@example.com", semester: 3, department: "Information Technology" });
+    await admin.students.add({ studentId: "IT-001", fullName: "Asha Rao", email: "asha@example.com", semester: 3, year: 2, department: "Information Technology" });
     const student = appRouter.createCaller(contextFor("user"));
-    await expect(student.students.verify({ studentId: "IT-001" })).resolves.toMatchObject({ verified: true, fullName: "Asha Rao" });
+    await expect(student.students.verify({ studentId: "IT-001", fullName: "Asha Rao", branch: "Information Technology", year: 2 })).resolves.toMatchObject({ verified: true, fullName: "Asha Rao" });
+    await expect(student.materials.list()).resolves.toEqual([]);
   });
 
   it("imports valid Excel rows, skips duplicates, and reports invalid rows", async () => {
     const admin = appRouter.createCaller(contextFor("admin"));
-    const result = await admin.students.importExcel({ fileName: "students.xlsx", fileBase64: excelBase64([{ studentId: "IT-002", fullName: "Mina Shah", email: "mina@example.com", semester: 2 }, { studentId: "IT-002", fullName: "Duplicate", email: "mina@example.com", semester: 2 }, { studentId: "IT-003", fullName: "Invalid Semester", email: "invalid@example.com", semester: 9 }]) });
+    const result = await admin.students.importExcel({ fileName: "students.xlsx", fileBase64: excelBase64([{ studentId: "IT-002", fullName: "Mina Shah", email: "mina@example.com", branch: "Information Technology", year: 1, semester: 2 }, { studentId: "IT-002", fullName: "Duplicate", email: "mina@example.com", branch: "Information Technology", year: 1, semester: 2 }, { studentId: "IT-003", fullName: "Invalid Semester", email: "invalid@example.com", branch: "Information Technology", year: 1, semester: 9 }]) });
     expect(result).toMatchObject({ added: 1, skipped: 1 });
     expect(result.errors).toHaveLength(1);
     expect(records).toHaveLength(1);
   });
 
+  it("rejects mismatched name, branch, or year details", async () => {
+    const admin = appRouter.createCaller(contextFor("admin"));
+    await admin.students.add({ studentId: "IT-006", fullName: "Riya Menon", email: "asha@example.com", year: 3, department: "Information Technology" });
+    const student = appRouter.createCaller(contextFor("user"));
+    await expect(student.students.verify({ studentId: "IT-006", fullName: "Wrong Name", branch: "Information Technology", year: 3 })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
   it("keeps IDs until admin deletion and blocks unregistered students", async () => {
     const admin = appRouter.createCaller(contextFor("admin"));
-    const created = await admin.students.add({ studentId: "IT-004", fullName: "Nikhil Das", email: "nikhil@example.com", semester: 4, department: "Information Technology" });
+    const created = await admin.students.add({ studentId: "IT-004", fullName: "Nikhil Das", email: "nikhil@example.com", semester: 4, year: 2, department: "Information Technology" });
     const student = appRouter.createCaller(contextFor("user"));
-    await expect(student.students.verify({ studentId: "UNKNOWN" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(student.students.verify({ studentId: "UNKNOWN", fullName: "Nikhil Das", branch: "Information Technology", year: 2 })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await admin.students.delete({ id: created.id });
-    await expect(student.students.verify({ studentId: "IT-004" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(student.students.verify({ studentId: "IT-004", fullName: "Nikhil Das", branch: "Information Technology", year: 2 })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 
   it("prevents students from managing the registry", async () => {
     const student = appRouter.createCaller(contextFor("user"));
     await expect(student.students.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
-    await expect(student.students.add({ studentId: "IT-005", fullName: "Blocked User", email: "blocked@example.com", semester: 1, department: "Information Technology" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(student.students.add({ studentId: "IT-005", fullName: "Blocked User", email: "blocked@example.com", semester: 1, year: 1, department: "Information Technology" })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

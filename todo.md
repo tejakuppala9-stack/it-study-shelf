@@ -33,3 +33,8 @@
 - [x] Route Student Login to approved student-ID verification without exposing an email-login option
 - [x] Route Admin Login to the administrator authentication flow and keep admin controls role-gated
 - [x] Verify responsive front-page role presentation and role-specific access behavior, including mobile review and admin redirect wiring
+
+- [x] Add student profile verification fields for Student ID, Full Name, Branch, and Year
+- [x] Require authenticated students to complete and pass the profile form before viewing materials
+- [x] Preserve submitted student profile access state across page reloads while rechecking approved identity
+- [x] Add tests for profile validation, rejected mismatches, successful profile verification, and materials catalog access

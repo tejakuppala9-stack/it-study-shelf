@@ -28,16 +28,17 @@ export const appRouter = router({
       return listStudentRegistry();
     }),
     verify: protectedProcedure
-      .input(z.object({ studentId: z.string().trim().min(2).max(100) }))
+      .input(z.object({ studentId: z.string().trim().min(2).max(100), fullName: z.string().trim().min(2).max(255), branch: z.string().trim().min(2).max(160), year: z.number().int().min(1).max(4) }))
       .query(async ({ input, ctx }) => {
         if (ctx.user.role === "admin") return { verified: true, studentId: input.studentId };
         const student = await getStudentByStudentId(input.studentId);
         if (!student) throw new TRPCError({ code: "UNAUTHORIZED", message: "That student ID is not registered by the administrator" });
         if (!student.email || !ctx.user.email || student.email.toLowerCase() !== ctx.user.email.toLowerCase()) throw new TRPCError({ code: "UNAUTHORIZED", message: "This student ID is not linked to the signed-in student account" });
+        if (student.fullName.toLowerCase() !== input.fullName.toLowerCase() || student.department.toLowerCase() !== input.branch.toLowerCase() || student.year !== input.year) throw new TRPCError({ code: "UNAUTHORIZED", message: "The submitted student details do not match the administrator record" });
         return { verified: true, studentId: student.studentId, fullName: student.fullName };
       }),
     add: protectedProcedure
-      .input(z.object({ studentId: z.string().trim().min(2).max(100), fullName: z.string().trim().min(2).max(255), email: z.string().email(), semester: z.number().int().min(1).max(8).optional(), department: z.string().trim().min(2).max(160).default("Information Technology") }))
+      .input(z.object({ studentId: z.string().trim().min(2).max(100), fullName: z.string().trim().min(2).max(255), email: z.string().email(), semester: z.number().int().min(1).max(8).optional(), year: z.number().int().min(1).max(4), department: z.string().trim().min(2).max(160) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can manage student IDs" });
         if (await getStudentByStudentId(input.studentId)) throw new TRPCError({ code: "CONFLICT", message: "That student ID is already registered" });
@@ -59,11 +60,13 @@ export const appRouter = router({
           const normalized = Object.fromEntries(Object.entries(row).map(([key, value]) => [key.toLowerCase().replace(/[\s_-]/g, ""), String(value ?? "").trim()]));
           const studentId = normalized.studentid || normalized.id || "";
           const fullName = normalized.fullname || normalized.name || "";
-          if (!studentId || !fullName || !normalized.email) { errors.push(`Row ${index + 2}: studentId, fullName, and email are required`); continue; }
+          if (!studentId || !fullName || !normalized.email || !(normalized.branch || normalized.department) || !normalized.year) { errors.push(`Row ${index + 2}: studentId, fullName, email, branch, and year are required`); continue; }
           if (await getStudentByStudentId(studentId)) { skipped += 1; continue; }
           const semesterValue = normalized.semester ? Number(normalized.semester) : undefined;
+          const yearValue = normalized.year ? Number(normalized.year) : undefined;
           if (semesterValue !== undefined && (!Number.isInteger(semesterValue) || semesterValue < 1 || semesterValue > 8)) { errors.push(`Row ${index + 2}: semester must be between 1 and 8`); continue; }
-          await createStudentRegistryRecord({ studentId, fullName, email: normalized.email || null, semester: semesterValue, department: normalized.department || "Information Technology", createdBy: ctx.user.id });
+          if (yearValue !== undefined && (!Number.isInteger(yearValue) || yearValue < 1 || yearValue > 4)) { errors.push(`Row ${index + 2}: year must be between 1 and 4`); continue; }
+          await createStudentRegistryRecord({ studentId, fullName, email: normalized.email || null, semester: semesterValue, year: yearValue, department: normalized.branch || normalized.department || "Information Technology", createdBy: ctx.user.id });
           added += 1;
         }
         return { added, skipped, errors };
