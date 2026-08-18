@@ -43,6 +43,13 @@
       "when": 1787064467626,
       "tag": "0005_mysterious_sentry",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1787066858821,
+      "tag": "0006_serious_puppet_master",
+      "breakpoints": true
     }
   ]
 }

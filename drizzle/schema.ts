@@ -31,6 +31,7 @@ export const studyMaterials = mysqlTable("studyMaterials", {
   subject: varchar("subject", { length: 120 }).notNull(),
   semester: int("semester").notNull(),
   academicYear: int("academicYear").notNull(),
+  provider: varchar("provider", { length: 255 }).notNull().default("Not specified"),
   description: text("description").notNull(),
   fileUrl: text("fileUrl").notNull(),
   fileKey: text("fileKey").notNull(),

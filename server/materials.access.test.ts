@@ -17,7 +17,7 @@ vi.mock("./storage", () => ({
 }));
 
 vi.mock("./db", () => ({
-  listStudyMaterials: vi.fn(async (filters?: { subject?: string; semester?: number }) => storedMaterials.filter(material => (!filters?.subject || material.subject === filters.subject) && (!filters?.semester || material.semester === filters.semester))),
+  listStudyMaterials: vi.fn(async (filters?: { subject?: string; semester?: number; provider?: string }) => storedMaterials.filter(material => (!filters?.subject || material.subject === filters.subject) && (!filters?.semester || material.semester === filters.semester) && (!filters?.provider || material.provider === filters.provider))),
   getStudyMaterialById: vi.fn(async (id: number) => storedMaterials.find(material => material.id === id)),
   createStudyMaterial: vi.fn(async (material: any) => { const id = nextId++; storedMaterials.push({ ...material, id }); return id; }),
   deleteStudyMaterial: vi.fn(async (id: number) => { const index = storedMaterials.findIndex(material => material.id === id); if (index >= 0) storedMaterials.splice(index, 1); }),
@@ -32,11 +32,12 @@ function contextFor(role: "user" | "admin"): TrpcContext {
   };
 }
 
-const uploadInput = (title: string, subject: string, semester: number, academicYear = 1) => ({
+const uploadInput = (title: string, subject: string, semester: number, academicYear = 1, provider = "Prof. Test") => ({
   title,
   subject,
   semester,
   academicYear,
+  provider,
   description: `A detailed ${title} resource for semester ${semester}.`,
   fileName: `${title.toLowerCase().replaceAll(" ", "-")}.pdf`,
   mimeType: "application/pdf" as const,
@@ -59,9 +60,12 @@ describe("materials persistence and role access", () => {
   it("preserves uploaded records through filtered reads until admin deletion", async () => {
     const caller = appRouter.createCaller(contextFor("admin"));
     const created = await caller.materials.upload(uploadInput("Network Security Guide", "Networking", 2, 3));
-    const filtered = await caller.materials.list({ subject: "Networking", semester: 2 });
+    const filtered = await caller.materials.list({ subject: "Networking", semester: 2, provider: "Prof. Test" });
     expect(filtered).toHaveLength(1);
     expect(filtered[0]?.title).toBe("Network Security Guide");
+    expect(filtered[0]?.provider).toBe("Prof. Test");
+    const detail = await caller.materials.getById({ id: created.id });
+    expect(detail.provider).toBe("Prof. Test");
     await caller.materials.delete({ id: created.id });
     expect(await caller.materials.list()).toHaveLength(0);
     expect(deletedKeys).toHaveLength(1);

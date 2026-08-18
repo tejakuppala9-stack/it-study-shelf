@@ -89,13 +89,14 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function listStudyMaterials(filters?: { subject?: string; semester?: number }) {
+export async function listStudyMaterials(filters?: { subject?: string; semester?: number; provider?: string }) {
   const db = await getDb();
   if (!db) return [];
 
   const conditions = [];
   if (filters?.subject) conditions.push(eq(studyMaterials.subject, filters.subject));
   if (filters?.semester) conditions.push(eq(studyMaterials.semester, filters.semester));
+  if (filters?.provider) conditions.push(eq(studyMaterials.provider, filters.provider));
 
   const materials = await db.select().from(studyMaterials).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(studyMaterials.createdAt));
   if (!materials.length) return materials;

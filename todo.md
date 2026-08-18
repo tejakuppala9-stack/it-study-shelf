@@ -80,3 +80,8 @@
 - [x] Verify readable contrast, reduced-motion fallback, desktop and mobile responsive behavior, type checks, tests, and production build
 
 - [x] Replace the heart icon with a thumbs-up icon in all material like controls while preserving counts and toggle behavior
+
+- [x] Add required provided-by metadata for each uploaded material, supporting professor or lecturer names
+- [x] Persist and validate the provider name in the study-material database and upload procedure, with provider-aware Drizzle filtering
+- [x] Display provider names on student material cards, detail pages, admin material rows, and search results
+- [x] Add provider-aware material search, database/detail assertions, tests, build, and responsive presentation

@@ -1,0 +1,1 @@
+ALTER TABLE `studyMaterials` ADD `provider` varchar(255) DEFAULT 'Not specified' NOT NULL;

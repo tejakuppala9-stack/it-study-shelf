@@ -130,7 +130,7 @@ export const appRouter = router({
         }
       }),
     list: publicProcedure
-      .input(z.object({ subject: z.string().optional(), semester: z.number().int().min(1).max(2).optional() }).optional())
+      .input(z.object({ subject: z.string().optional(), semester: z.number().int().min(1).max(2).optional(), provider: z.string().trim().max(255).optional() }).optional())
       .query(({ input }) => listStudyMaterials(input)),
     getById: publicProcedure
       .input(z.object({ id: z.number().int().positive() }))
@@ -145,6 +145,7 @@ export const appRouter = router({
         subject: z.string().trim().min(2).max(120),
         semester: z.number().int().min(1).max(2),
         academicYear: z.number().int().min(1).max(4),
+        provider: z.string().trim().min(2).max(255),
         description: z.string().trim().min(10).max(5000),
         fileName: z.string().trim().min(1).max(255),
         mimeType: z.enum(["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]),
@@ -162,6 +163,7 @@ export const appRouter = router({
             subject: input.subject,
             semester: input.semester,
             academicYear: input.academicYear,
+            provider: input.provider,
             description: input.description,
             fileUrl: uploaded.url,
             fileKey: uploaded.key,
