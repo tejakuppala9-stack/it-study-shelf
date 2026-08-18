@@ -5,7 +5,6 @@ import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
 const storedMaterials: any[] = [];
-const deletedKeys: string[] = [];
 const likeState = new Set<string>();
 let adminCookie = "";
 beforeAll(async () => { adminCookie = await new SignJWT({ purpose: "admin-portal" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("1h").sign(new TextEncoder().encode(process.env.JWT_SECRET)); });
@@ -13,7 +12,6 @@ let nextId = 1;
 
 vi.mock("./storage", () => ({
   storagePut: vi.fn(async (key: string) => ({ key, url: `/manus-storage/${key}` })),
-  storageDelete: vi.fn(async (key: string) => { deletedKeys.push(key); }),
 }));
 
 vi.mock("./db", () => ({
@@ -45,7 +43,7 @@ const uploadInput = (title: string, subject: string, semester: number, academicY
 });
 
 describe("materials persistence and role access", () => {
-  beforeEach(() => { storedMaterials.length = 0; deletedKeys.length = 0; likeState.clear(); nextId = 1; });
+  beforeEach(() => { storedMaterials.length = 0; likeState.clear(); nextId = 1; });
 
   it("keeps multiple sequential admin uploads in the library", async () => {
     const caller = appRouter.createCaller(contextFor("admin"));
@@ -68,7 +66,7 @@ describe("materials persistence and role access", () => {
     expect(detail.provider).toBe("Prof. Test");
     await caller.materials.delete({ id: created.id });
     expect(await caller.materials.list()).toHaveLength(0);
-    expect(deletedKeys).toHaveLength(1);
+    await expect(caller.materials.getById({ id: created.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   it("denies students from uploading or deleting", async () => {

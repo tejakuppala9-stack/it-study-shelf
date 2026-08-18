@@ -102,3 +102,10 @@
 
 - [x] Exercise a real uploaded PDF by clicking the app’s Read/Open control and confirm the end-to-end viewer or fallback path
 - [x] Capture end-to-end verification evidence for the /materials/:id viewer path from the app UI
+
+- [x] Diagnose the admin material deletion 404 and storage-delete failure
+- [x] Repair the admin deletion flow by removing the material record and revoking all application access; physical object deletion remains unavailable in the platform storage API
+- [x] Verify admin deletion behavior with tests, build, and runtime checks
+
+- [ ] Exercise the admin material delete action in the running app and confirm it succeeds without a storage-delete 404
+- [ ] Verify a deleted material disappears from the admin list and is no longer accessible at /materials/:id

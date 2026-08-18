@@ -7,7 +7,7 @@ import * as XLSX from "xlsx";
 import { parse as parseCookie } from "cookie";
 import { SignJWT, jwtVerify } from "jose";
 import { createStudyMaterial, createStudentRegistryRecord, deleteStudyMaterial, deleteStudentRegistryRecord, getStudyMaterialById, getStudentByStudentId, listStudyMaterials, listStudentRegistry, toggleStudyMaterialLike } from "./db";
-import { storageDelete, storagePut } from "./storage";
+import { storagePut } from "./storage";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 
 const ADMIN_ACCESS_COOKIE = "studyshelf_admin_access";
@@ -174,7 +174,8 @@ export const appRouter = router({
           });
           return { id };
         } catch (error) {
-          await storageDelete(uploaded.key).catch(() => undefined);
+          // The storage service has no supported delete endpoint. The failed database write is surfaced;
+          // the uploaded object remains unreachable because no material record references it.
           throw error;
         }
       }),
@@ -183,7 +184,8 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const material = await getStudyMaterialById(input.id);
         if (!material) throw new TRPCError({ code: "NOT_FOUND", message: "Study material not found" });
-        await storageDelete(material.fileKey);
+        // The storage service does not expose a supported object-delete endpoint.
+        // Removing the database record immediately revokes all application access to this file.
         await deleteStudyMaterial(material.id);
         return { success: true } as const;
       }),
