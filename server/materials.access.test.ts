@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll } from "vitest";
+import { SignJWT } from "jose";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
 const storedMaterials: any[] = [];
 const deletedKeys: string[] = [];
+let adminCookie = "";
+beforeAll(async () => { adminCookie = await new SignJWT({ purpose: "admin-portal" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("1h").sign(new TextEncoder().encode(process.env.JWT_SECRET)); });
 let nextId = 1;
 
 vi.mock("./storage", () => ({
@@ -21,7 +25,7 @@ vi.mock("./db", () => ({
 function contextFor(role: "user" | "admin"): TrpcContext {
   return {
     user: { id: role === "admin" ? 2 : 1, openId: `${role}-open-id`, email: `${role}@example.com`, name: role === "admin" ? "Admin" : "Student", loginMethod: "manus", role, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
-    req: { protocol: "https", headers: {} } as TrpcContext["req"],
+    req: { protocol: "https", headers: role === "admin" ? { cookie: `studyshelf_admin_access=${adminCookie}` } : {} } as TrpcContext["req"],
     res: {} as TrpcContext["res"],
   };
 }

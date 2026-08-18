@@ -1,9 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { SignJWT } from "jose";
 import * as XLSX from "xlsx";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
 const records: any[] = [];
+let adminCookie = "";
+beforeAll(async () => { adminCookie = await new SignJWT({ purpose: "admin-portal" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("1h").sign(new TextEncoder().encode(process.env.JWT_SECRET)); });
 let nextId = 1;
 
 vi.mock("./db", () => ({
@@ -20,7 +23,7 @@ vi.mock("./db", () => ({
 vi.mock("./storage", () => ({ storagePut: vi.fn(), storageDelete: vi.fn() }));
 
 function contextFor(role: "user" | "admin"): TrpcContext {
-  return {     user: { id: role === "admin" ? 2 : 1, openId: role, email: role === "admin" ? "admin@example.com" : "asha@example.com", name: role, loginMethod: "manus", role, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }, req: { protocol: "https", headers: {} } as TrpcContext["req"], res: {} as TrpcContext["res"] };
+  return {     user: { id: role === "admin" ? 2 : 1, openId: role, email: role === "admin" ? "admin@example.com" : "asha@example.com", name: role, loginMethod: "manus", role, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }, req: { protocol: "https", headers: role === "admin" ? { cookie: `studyshelf_admin_access=${adminCookie}` } : {} } as TrpcContext["req"], res: {} as TrpcContext["res"] };
 }
 
 function excelBase64(rows: Record<string, unknown>[]) {

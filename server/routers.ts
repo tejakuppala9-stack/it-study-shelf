@@ -4,9 +4,24 @@ import { systemRouter } from "./_core/systemRouter";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import * as XLSX from "xlsx";
+import { parse as parseCookie } from "cookie";
+import { SignJWT, jwtVerify } from "jose";
 import { createStudyMaterial, createStudentRegistryRecord, deleteStudyMaterial, deleteStudentRegistryRecord, getStudyMaterialById, getStudentByStudentId, listStudyMaterials, listStudentRegistry } from "./db";
 import { storageDelete, storagePut } from "./storage";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+
+const ADMIN_ACCESS_COOKIE = "studyshelf_admin_access";
+const adminPortalProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Administrator access required" });
+  const token = parseCookie(ctx.req.headers.cookie || "")[ADMIN_ACCESS_COOKIE];
+  if (!token || !process.env.JWT_SECRET) throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin Portal password required" });
+  try {
+    await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET), { algorithms: ["HS256"] });
+  } catch {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin Portal password required" });
+  }
+  return next();
+});
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -16,14 +31,24 @@ export const appRouter = router({
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      ctx.res.clearCookie(ADMIN_ACCESS_COOKIE, { ...cookieOptions, maxAge: -1 });
       return {
         success: true,
       } as const;
     }),
+    verifyAdminPassword: protectedProcedure
+      .input(z.object({ password: z.string().min(1).max(128) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Administrator access required" });
+        if (!process.env.ADMIN_PORTAL_PASSWORD || input.password !== process.env.ADMIN_PORTAL_PASSWORD) throw new TRPCError({ code: "UNAUTHORIZED", message: "Incorrect administrator password" });
+        const token = await new SignJWT({ purpose: "admin-portal" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("1h").sign(new TextEncoder().encode(process.env.JWT_SECRET));
+        (ctx.res as any).cookie(ADMIN_ACCESS_COOKIE, token, { httpOnly: true, secure: true, sameSite: "none", maxAge: 60 * 60 * 1000, path: "/" });
+        return { verified: true } as const;
+      }),
   }),
 
   students: router({
-    list: protectedProcedure.query(({ ctx }) => {
+    list: adminPortalProcedure.query(({ ctx }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can manage student IDs" });
       return listStudentRegistry();
     }),
@@ -42,7 +67,7 @@ export const appRouter = router({
         if (!student) throw new TRPCError({ code: "UNAUTHORIZED", message: "That student ID is not registered by the administrator" });
         return { verified: true, studentId: student.studentId, fullName: student.fullName };
       }),
-    add: protectedProcedure
+    add: adminPortalProcedure
       .input(z.object({ studentId: z.string().trim().min(2).max(100), fullName: z.string().trim().min(2).max(255), email: z.string().email(), semester: z.number().int().min(1).max(8).optional(), year: z.number().int().min(1).max(4), department: z.string().trim().min(2).max(160) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can manage student IDs" });
@@ -50,7 +75,7 @@ export const appRouter = router({
         const id = await createStudentRegistryRecord({ ...input, email: input.email || null, createdBy: ctx.user.id });
         return { id };
       }),
-    importExcel: protectedProcedure
+    importExcel: adminPortalProcedure
       .input(z.object({ fileBase64: z.string().min(1), fileName: z.string().min(1) }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can manage student IDs" });
@@ -76,10 +101,9 @@ export const appRouter = router({
         }
         return { added, skipped, errors };
       }),
-    delete: protectedProcedure
+    delete: adminPortalProcedure
       .input(z.object({ id: z.number().int().positive() }))
       .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can manage student IDs" });
         await deleteStudentRegistryRecord(input.id);
         return { success: true } as const;
       }),
@@ -96,7 +120,7 @@ export const appRouter = router({
         if (!material) throw new TRPCError({ code: "NOT_FOUND", message: "Study material not found" });
         return material;
       }),
-    upload: protectedProcedure
+    upload: adminPortalProcedure
       .input(z.object({
         title: z.string().trim().min(2).max(255),
         subject: z.string().trim().min(2).max(120),
@@ -131,10 +155,9 @@ export const appRouter = router({
           throw error;
         }
       }),
-    delete: protectedProcedure
+    delete: adminPortalProcedure
       .input(z.object({ id: z.number().int().positive() }))
       .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can delete materials" });
         const material = await getStudyMaterialById(input.id);
         if (!material) throw new TRPCError({ code: "NOT_FOUND", message: "Study material not found" });
         await storageDelete(material.fileKey);

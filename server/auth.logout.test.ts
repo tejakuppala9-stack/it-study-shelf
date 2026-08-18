@@ -49,8 +49,9 @@ describe("auth.logout", () => {
     const result = await caller.auth.logout();
 
     expect(result).toEqual({ success: true });
-    expect(clearedCookies).toHaveLength(1);
+    expect(clearedCookies).toHaveLength(2);
     expect(clearedCookies[0]?.name).toBe(COOKIE_NAME);
+    expect(clearedCookies[1]?.name).toBe("studyshelf_admin_access");
     expect(clearedCookies[0]?.options).toMatchObject({
       maxAge: -1,
       secure: true,

@@ -47,3 +47,8 @@
 
 - [x] Keep the public first page as a Student Portal versus Admin Portal selector
 - [x] Ensure Admin Portal leads into protected administrator authentication and never exposes the Admin Panel to students
+
+- [x] Configure the temporary Admin Portal password through a secure environment secret
+- [x] Add an admin password gate before rendering the Admin Panel
+- [x] Keep existing admin role authorization and student denial behavior intact
+- [x] Add tests for correct and incorrect admin password handling
