@@ -108,7 +108,8 @@
 - [x] Verify admin deletion behavior with tests, build, and runtime checks
 
 - [ ] Exercise the admin material delete action in the running app and confirm it succeeds without a storage-delete 404
-- [ ] Verify a deleted material disappears from the admin list and is no longer accessible at /materials/:id
+- [x] Exercise the admin material delete action in the running app and confirm it succeeds without a storage-delete 404
+- [x] Verify a deleted material disappears from the admin list and is no longer accessible at /materials/:id
 
 - [x] Replace the admin-login title state with simple “Ready to login” copy
 - [x] Remove unwanted “IT” wording from student and admin page headings and supporting copy
