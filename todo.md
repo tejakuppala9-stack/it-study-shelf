@@ -107,7 +107,6 @@
 - [x] Repair the admin deletion flow by removing the material record and revoking all application access; physical object deletion remains unavailable in the platform storage API
 - [x] Verify admin deletion behavior with tests, build, and runtime checks
 
-- [ ] Exercise the admin material delete action in the running app and confirm it succeeds without a storage-delete 404
 - [x] Exercise the admin material delete action in the running app and confirm it succeeds without a storage-delete 404
 - [x] Verify a deleted material disappears from the admin list and is no longer accessible at /materials/:id
 
