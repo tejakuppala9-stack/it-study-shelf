@@ -9,26 +9,37 @@ import { SignJWT, jwtVerify } from "jose";
 import { createStudyMaterial, createStudentRegistryRecord, deleteStudyMaterial, deleteStudentRegistryRecord, getStudyMaterialById, getStudentByStudentId, listStudyMaterials, listStudentRegistry, toggleStudyMaterialLike } from "./db";
 import { storagePut } from "./storage";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import type { User } from "../drizzle/schema";
 
 const ADMIN_ACCESS_COOKIE = "studyshelf_admin_access";
 const STUDENT_ACCESS_COOKIE = "studyshelf_student_access";
-const adminPortalProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Administrator access required" });
+const passwordAdminUser = (): User => {
+  const now = new Date();
+  return { id: 0, openId: "studyshelf-password-admin", name: "Administrator", email: null, loginMethod: "password", role: "admin", createdAt: now, updatedAt: now, lastSignedIn: now };
+};
+const getPasswordAdmin = async (ctx: { req: any }) => {
   const token = parseCookie(ctx.req.headers.cookie || "")[ADMIN_ACCESS_COOKIE];
-  if (!token || !process.env.JWT_SECRET) throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin Portal password required" });
+  if (!token || !process.env.JWT_SECRET) return null;
   try {
-    await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET), { algorithms: ["HS256"] });
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET), { algorithms: ["HS256"] });
+    if (payload.purpose !== "admin-portal") return null;
+    return passwordAdminUser();
   } catch {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin Portal password required" });
+    return null;
   }
-  return next();
+};
+const adminPortalProcedure = publicProcedure.use(async ({ ctx, next }) => {
+  if (ctx.user && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Administrator access required" });
+  const admin = await getPasswordAdmin(ctx);
+  if (!admin) throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin Portal password required" });
+  return next({ ctx: { ...ctx, user: admin } });
 });
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(async opts => (await getPasswordAdmin(opts.ctx)) || opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -37,10 +48,9 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
-    verifyAdminPassword: protectedProcedure
+    verifyAdminPassword: publicProcedure
       .input(z.object({ password: z.string().min(1).max(128) }))
       .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Administrator access required" });
         if (!process.env.ADMIN_PORTAL_PASSWORD || input.password !== process.env.ADMIN_PORTAL_PASSWORD) throw new TRPCError({ code: "UNAUTHORIZED", message: "Incorrect administrator password" });
         const token = await new SignJWT({ purpose: "admin-portal" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("1h").sign(new TextEncoder().encode(process.env.JWT_SECRET));
         (ctx.res as any).cookie(ADMIN_ACCESS_COOKIE, token, { httpOnly: true, secure: true, sameSite: "none", maxAge: 60 * 60 * 1000, path: "/" });
